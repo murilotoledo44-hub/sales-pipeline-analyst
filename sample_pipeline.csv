@@ -1,0 +1,31 @@
+deal_id,deal_name,stage,status,amount,source,created_date,close_date,last_activity_date,contacts_engaged
+1001,Acme Robotics - Expansion,Negotiation,open,42000,Outbound,2026-06-02,2026-10-15,2026-09-14,3
+1002,BrightPath Retail,Proposal,open,18500,Inbound,2026-07-10,2026-10-05,2026-09-01,1
+1003,Nordic Freight Co,Evaluation,open,65000,Outbound,2026-05-20,2026-10-30,2026-08-10,1
+1004,Vega Health Systems,Qualification,open,27000,Referral,2026-08-01,2026-11-01,2026-09-16,2
+1005,Solaris Manufacturing,Discovery,open,15000,Outbound,2026-09-01,2026-11-20,2026-09-15,1
+1006,Torres Legal Group,Negotiation,open,31000,Inbound,2026-06-15,2026-09-25,2026-09-17,4
+1007,Fintra Payments,Proposal,open,54000,Outbound,2026-07-01,2026-10-10,2026-08-20,1
+1008,Meridian Logistics,Evaluation,open,22000,Outbound,2026-06-25,2026-10-20,2026-09-16,2
+1009,Cobalt Analytics,Discovery,open,9800,Referral,2026-09-05,2026-11-25,2026-09-15,1
+1010,Harbor Insurance,Qualification,open,38000,Outbound,2026-08-10,2026-11-05,2026-09-10,1
+1011,Falcon Media Group,Negotiation,open,47000,Inbound,2026-06-20,2026-09-28,2026-09-12,3
+1012,Lumen Energy Co,Proposal,open,29500,Outbound,2026-07-18,2026-10-18,2026-08-25,1
+1013,Ashford Consulting,Evaluation,open,16200,Referral,2026-08-15,2026-11-10,2026-09-13,2
+1014,Kestrel Biotech,Discovery,open,52000,Outbound,2026-09-08,2026-12-01,2026-09-16,1
+1015,Ironclad Security,Qualification,open,24000,Outbound,2026-08-20,2026-11-15,2026-08-28,1
+1016,Willow Creek Realty,Won,closed_won,21000,Inbound,2026-04-01,2026-06-15,2026-06-15,4
+1017,Prairie Wind Farms,Won,closed_won,68000,Outbound,2026-03-10,2026-06-28,2026-06-28,5
+1018,Redstone Capital,Lost,closed_lost,35000,Outbound,2026-04-05,2026-07-01,2026-07-01,1
+1019,Blue Harbor Foods,Won,closed_won,19500,Referral,2026-04-20,2026-07-10,2026-07-10,3
+1020,Circuit Dynamics,Lost,closed_lost,44000,Outbound,2026-03-25,2026-06-30,2026-06-30,1
+1021,Granite Peak Mining,Won,closed_won,73000,Outbound,2026-02-15,2026-06-05,2026-06-05,4
+1022,Sable & Co,Lost,closed_lost,26000,Inbound,2026-04-10,2026-07-05,2026-07-05,2
+1023,Nimbus Cloud Services,Won,closed_won,31000,Referral,2026-05-01,2026-07-20,2026-07-20,3
+1024,Copperline Utilities,Lost,closed_lost,58000,Outbound,2026-03-05,2026-06-25,2026-06-25,1
+1025,Vantage Point Media,Won,closed_won,24500,Inbound,2026-05-10,2026-07-28,2026-07-28,4
+1026,Driftwood Hospitality,Lost,closed_lost,17800,Outbound,2026-04-15,2026-07-08,2026-07-08,1
+1027,Anchor Point Finance,Won,closed_won,45000,Outbound,2026-04-25,2026-08-01,2026-08-01,3
+1028,Cedar Grove Systems,Lost,closed_lost,22500,Referral,2026-05-05,2026-08-05,2026-08-05,2
+1029,Perch Analytics,Won,closed_won,33000,Inbound,2026-05-15,2026-08-10,2026-08-10,4
+1030,Marrow Bio Labs,Lost,closed_lost,61000,Outbound,2026-03-20,2026-07-15,2026-07-15,1
