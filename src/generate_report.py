@@ -55,13 +55,47 @@ def call_claude(persona_prompt: str, metrics_summary: dict) -> str:
         messages=[{"role": "user", "content": user_message}],
     )
 
-    return "".join(block.text for block in response.content if block.type == "text")
+    print(f"stop_reason: {response.stop_reason}")
+    print(f"content blocks: {[block.type for block in response.content]}")
+
+    text = "".join(block.text for block in response.content if block.type == "text")
+
+    if not text.strip():
+        raise RuntimeError(
+            "A API retornou uma resposta vazia. "
+            f"stop_reason={response.stop_reason}, "
+            f"blocks={[block.type for block in response.content]}. "
+            "Verifique o nome do modelo e os logs acima."
+        )
+
+    return text
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default=str(ROOT / "data" / "sample_pipeline.csv"))
     parser.add_argument("--quota", type=float, default=250000)
+    args = parser.parse_args()
+
+    df = metrics.load_data(args.data)
+    metrics_summary = metrics.build_metrics_summary(df, quota=args.quota)
+
+    print("Métricas calculadas:")
+    print(json.dumps(metrics_summary, indent=2, ensure_ascii=False))
+
+    persona_prompt = load_persona()
+    report_text = call_claude(persona_prompt, metrics_summary)
+
+    REPORTS_DIR.mkdir(exist_ok=True)
+    out_path = REPORTS_DIR / f"pipeline_report_{date.today().isoformat()}.md"
+    out_path.write_text(report_text, encoding="utf-8")
+
+    print(f"\nRelatório salvo em: {out_path}")
+
+
+if __name__ == "__main__":
+    main()
+
     args = parser.parse_args()
 
     df = metrics.load_data(args.data)
