@@ -1,4 +1,4 @@
-"""
+"""""
 generate_report.py
 
 Fluxo do projeto:
@@ -52,6 +52,7 @@ def call_claude(persona_prompt: str, metrics_summary: dict) -> str:
         model=MODEL,
         max_tokens=4096,
         system=persona_prompt,
+        thinking={"type": "disabled"},
         messages=[{"role": "user", "content": user_message}],
     )
 
