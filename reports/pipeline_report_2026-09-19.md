@@ -1,67 +1,64 @@
-# Relatório de Pipeline — Análise do Período
+# Relatório de Pipeline
 
 ## 1. Resumo executivo
 
-Pipeline aberto de R$ 491.000 contra uma meta de R$ 250.000, gerando cobertura de 1,96x — no limite inferior do saudável. O maior risco não está no volume, mas na qualidade: 5 dos 15 negócios abertos (33%) estão estagnados há 18-40 dias, e outros 5 são single-threaded, com sobreposição significativa entre os dois grupos (3 negócios aparecem em ambas as listas). O canal Outbound está arrastando a taxa de conversão geral para baixo (37,5% vs. 75% de Inbound), o que merece atenção antes de escalar investimento nesse canal.
+O pipeline tem cobertura numérica adequada (1.96x) e win rate agregado saudável (53.3%), mas isso mascara um problema sério de concentração de risco: **5 dos 15 negócios em aberto estão estagnados e 5 estão single-threaded**, com sobreposição significativa entre os dois grupos. O maior risco não é volume — é qualidade de execução em negócios de estágio avançado (Proposal, Evaluation), que é onde estagnação custa mais caro.
 
 ## 2. Métricas-chave
 
 | Métrica | Valor | Leitura |
 |---|---|---|
-| Win rate geral | 53,3% | Sólido, mas mascara disparidade grande entre fontes |
-| Win rate Inbound | 75,0% | Melhor canal, disponível para escalar |
-| Win rate Referral | 66,7% | Segundo melhor canal — base amostral provavelmente pequena, verificar N |
-| Win rate Outbound | 37,5% | Metade da conversão de Inbound — canal problemático |
-| Tamanho médio do negócio | R$ 39.375 | Referência, sem histórico comparativo para julgar tendência |
-| Ciclo de vendas médio | 90 dias | Referência; sem baseline anterior para avaliar se está acelerando ou não |
-| Velocidade de pipeline | R$ 3.497,81/dia | Métrica composta — útil para acompanhar tendência período a período |
-| Cobertura | 1,96x | Apertada frente à meta (ver seção 3) |
-| Negócios estagnados | 5 (R$ 191.000, 39% do pipeline) | Risco de atraso ou perda de forecast |
-| Negócios single-threaded | 5 (R$ 188.500, 38% do pipeline) | Risco de perda por dependência de um único contato |
+| Win rate geral | 53.3% | Sólido, mas varia fortemente por fonte (ver abaixo) |
+| Win rate — Inbound | 75.0% | Melhor fonte, priorizar alocação de esforço aqui |
+| Win rate — Referral | 66.7% | Forte, mas provavelmente volume baixo — checar N |
+| Win rate — Outbound | 37.5% | Quase metade do inbound; investigar qualificação ou SDR targeting |
+| Deal size médio | $39,375 | Referência para dimensionar forecast |
+| Ciclo de vendas médio | 90 dias | Usar como baseline para julgar estagnação (ver seção 4) |
+| Velocity | $3,497.81/dia | Indicador de saúde geral do motor de receita |
+| Cobertura | 1.96x | Abaixo do benchmark comum de 3x — ver seção 3 |
+| Negócios estagnados | 5 de 15 (33%) | Alto — leading indicator de risco de forecast |
+| Negócios single-threaded | 5 de 15 (33%) | Alto — risco de perda por falta de múltiplos stakeholders |
 
-**Nota de qualidade de dados:** não há dados de período anterior para comparação de tendência (win rate, ciclo, velocidade). Também não sei o tamanho da amostra por fonte (win rate de 66,7% em Referral pode ser 2 de 3 negócios — instável). Recomendo incluir contagem de negócios por fonte no próximo corte.
+**Nota de qualidade de dados:** o win rate por fonte não vem acompanhado de contagem de negócios (N). Um win rate de 66.7% em Referral pode representar 2 de 3 negócios — amostra pequena demais para tratar como tendência confiável. Recomendo reportar N junto com win rate por fonte nos próximos cortes.
 
 ## 3. Cobertura
 
-**Apertada.** Regra geral de mercado pede cobertura de 3x a 4x para pipelines com ciclo de 90 dias e win rate ~50%; 1,96x está bem abaixo disso.
+**Insuficiente**, não saudável.
 
-O cálculo simplista (491.000 / 250.000 = 1,96x) não pondera por win rate. Se aplicarmos o win rate real de 53,3% como proxy de probabilidade de conversão, o valor esperado do pipeline aberto é de aproximadamente R$ 261.700 — apenas 4,7% acima da meta. Isso significa que **não há margem de segurança**: qualquer perda acima do esperado (por exemplo, se os 5 negócios estagnados — R$ 191.000 — não avançarem) coloca a meta em risco direto.
+- Pipeline aberto total: $76,800 + $89,000 + $103,200 + $102,000 + $120,000 = **$491,000**
+- Quota: $250,000
+- Cobertura: 1.96x
 
-**Ação recomendada:** aumentar geração de pipeline novo neste período, priorizando Inbound e Referral (win rates mais altos), e não tratar 1,96x como confortável.
+O benchmark de mercado para cobertura saudável fica geralmente entre 3x–4x, considerando que nem todo pipeline fecha. Com win rate de 53.3%, o pipeline atual sozinho geraria uma expectativa matemática de ~$261,753 (53.3% de $491,000) — tecnicamente acima da quota, mas isso assume que **todos** os negócios progridem, o que contradiz diretamente os dados de estagnação e single-threading abaixo. Na prática, a cobertura efetiva (descontando negócios em risco) é mais estreita do que o número bruto sugere.
+
+**Ação recomendada:** aumentar geração de pipeline novo em Discovery/Qualification nas próximas 2-3 semanas — esses estágios têm menor valor total ($76,800 e $89,000) e são os que sustentam cobertura futura.
 
 ## 4. Negócios que precisam de intervenção
 
-### Estagnados
-| Negócio | Estágio | Valor | Dias sem atividade | Ação recomendada |
-|---|---|---|---|---|
-| Nordic Freight Co | Evaluation | R$ 65.000 | 40 | Escalar para call de reengajamento com champion; se sem resposta em 5 dias, marcar como at-risk no forecast |
-| Fintra Payments | Proposal | R$ 54.000 | 30 | Confirmar se a proposta ainda está sob avaliação; ligar diretamente para o decisor, não apenas e-mail |
-| Lumen Energy Co | Proposal | R$ 29.500 | 25 | Enviar follow-up com prazo claro de decisão; se não houver resposta, requalificar estágio |
-| Ironclad Security | Qualification | R$ 24.000 | 22 | Retomar discovery — 22 dias parado em Qualification sugere falta de urgência ou fit não confirmado |
-| BrightPath Retail | Proposal | R$ 18.500 | 18 | Follow-up padrão; menor risco relativo, mas monitorar próxima semana |
+Dois negócios aparecem em **ambas** as listas — estagnados e single-threaded — e são prioridade máxima.
 
-### Single-threaded
-| Negócio | Estágio | Valor | Contatos engajados | Ação recomendada |
+| Negócio | Estágio | Valor | Problema | Ação recomendada |
 |---|---|---|---|---|
-| Nordic Freight Co | Evaluation | R$ 65.000 | 1 | **Duplo risco** (também estagnado) — priorizar mapeamento de mais stakeholders antes de qualquer outra ação |
-| Fintra Payments | Proposal | R$ 54.000 | 1 | **Duplo risco** — buscar introdução a um segundo contato (financeiro ou usuário final) antes de reenviar proposta |
-| Kestrel Biotech | Discovery | R$ 52.000 | 1 | Ainda em estágio inicial — bom momento para mapear org chart antes de avançar |
-| Harbor Insurance | Qualification | R$ 38.000 | 1 | Solicitar apresentação a outro stakeholder como condição para avançar para Evaluation |
-| Lumen Energy Co | Proposal | R$ 29.500 | 1 | **Duplo risco** — mesma ação de expansão de contatos, combinada com o follow-up de estagnação |
+| **Nordic Freight Co** | Evaluation | $65,000 | 40 dias sem atividade + único contato | Maior risco do pipeline. Escalar para envolvimento executivo (seu VP com o deles) esta semana. Se não houver resposta em 5 dias úteis, mover para "at risk" no forecast. |
+| **Fintra Payments** | Proposal | $54,000 | 30 dias sem atividade + único contato | Está em Proposal há tempo suficiente para superar o ciclo médio (90 dias) sem fechar. Confirmar se a proposta ainda é prioridade do comprador; se não houver retorno em 1 semana, requalificar ou desqualificar. |
+| **Lumen Energy Co** | Proposal | $29,500 | 25 dias sem atividade + único contato | Mesma lógica do Fintra. Buscar segundo contato antes de reengajar — enviar proposta sozinho de novo não resolve o risco estrutural. |
+| **Ironclad Security** | Qualification | $24,000 | 22 dias sem atividade | Estágio inicial parado — sinal de baixa prioridade do comprador. Fazer uma tentativa de reengajamento direta; se sem resposta em 10 dias, desqualificar para limpar o forecast. |
+| **BrightPath Retail** | Proposal | $18,500 | 18 dias sem atividade | Mais recente entre os estagnados, ainda recuperável. Follow-up esta semana. |
+| **Harbor Insurance** | Qualification | $38,000 | Single-threaded (não estagnado) | Ainda ativo, mas risco estrutural. Mapear organograma do comprador e identificar segundo stakeholder antes de avançar para Evaluation. |
+| **Kestrel Biotech** | Discovery | $52,000 | Single-threaded (não estagnado) | Estágio inicial — momento certo para insistir em multi-threading antes de investir mais tempo de proposta. |
 
-**Destaque de risco composto:** Nordic Freight Co, Fintra Payments e Lumen Energy Co somam R$ 148.500 e estão estagnados **e** single-threaded simultaneamente. Isso é 30% do pipeline aberto concentrado no pior perfil de risco. Recomendo tratamento prioritário nesses três antes de qualquer outro negócio.
+**Padrão a observar:** 3 dos 4 negócios em Proposal/Evaluation têm exatamente esse perfil de risco duplo. Isso não é coincidência — sugere que o processo de qualificação não está forçando multi-threading antes de avançar de estágio. Recomendo revisar critérios de saída de Qualification para exigir 2+ contatos engajados.
 
 ## 5. Forecast
 
-Base: pipeline aberto de R$ 491.000, win rate histórico de 53,3% (mas com disparidade forte por fonte), 5 negócios de alto risco totalizando R$ 191.000.
+Base: pipeline aberto $491,000, win rate 53.3%, quota $250,000.
 
-- **Commit — R$ 130.000 a R$ 150.000**
-  Considera apenas negócios sem sinal de risco (não estagnados, multi-threaded) em estágios avançados (Proposal/Negotiation), aplicando um win rate conservador de ~65% (próximo ao de Referral/Inbound, fontes mais previsíveis). Exclui os R$ 148.500 de risco composto.
+| Cenário | Valor | Raciocínio |
+|---|---|---|
+| **Commit** | **$180,000 – $210,000** | Exclui os 5 negócios estagnados ($191,000 em risco direto) do cálculo de probabilidade plena. Aplica win rate ponderado apenas aos negócios com atividade recente e engajamento saudável. |
+| **Best Case** | **$230,000 – $260,000** | Assume que Fintra ($54,000) e BrightPath ($18,500) — os estagnados mais recentes/recuperáveis — reengajam e fecham dentro do padrão de 53.3%. Nordic Freight fica de fora por ser o de maior risco. |
+| **Upside** | **$280,000 – $310,000** | Assume recuperação de todos os 5 estagnados via intervenção ativa e conversão dos single-threaded (Harbor, Kestrel) acima da média por já estarem em estágios iniciais com tempo de reação. Requer execução das ações da seção 4 nos próximos 10 dias — não é um cenário passivo. |
 
-- **Best Case — R$ 190.000 a R$ 210.000**
-  Assume que 2 dos 3 negócios de risco composto (estagnados + single-threaded) são reengajados com sucesso nas próximas semanas e avançam, mais conversão normal do restante do pipeline saudável a 53,3%.
+**Por que não dou um único número:** a diferença entre Commit e Upside é de ~$100,000-130,000, quase metade da quota. Essa variância vem diretamente da incerteza sobre os 5 negócios estagnados — não é ruído estatístico, é risco identificável e acionável. Tratar isso como um ponto único de forecast escondería exatamente o risco que essa análise existe para expor.
 
-- **Upside — R$ 240.000 a R$ 260.000**
-  Requer que todos os 5 negócios estagnados sejam reativados **e** convertidos, e que os negócios em Negotiation (R$ 120.000) fechem quase integralmente. Esse cenário depende de intervenção ativa e imediata nos negócios da seção 4 — não é uma extrapolação passiva do histórico.
-
-**Leitura honesta:** mesmo no Best Case, o forecast fica abaixo da meta de R$ 250.000. Atingir a meta neste período depende de ação concreta nos negócios estagnados/single-threaded ou de aceleração de pipeline novo — não é resultado esperado do fluxo natural do pipeline atual.
+**Recomendação de acompanhamento:** reavaliar em 7 dias após as ações de reengajamento da seção 4. Se Nordic Freight e Fintra continuarem sem atividade após contato direto, mover Commit para o piso ($180,000) com alta confiança.
