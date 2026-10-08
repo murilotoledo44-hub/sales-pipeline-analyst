@@ -16,6 +16,8 @@ def load_data(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
     for col in DATE_COLS:
         df[col] = pd.to_datetime(df[col])
+    df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
+    df["contacts_engaged"] = pd.to_numeric(df["contacts_engaged"], errors="coerce").fillna(0)
     return df
 
 
@@ -54,7 +56,7 @@ def avg_sales_cycle_days(df: pd.DataFrame) -> float:
 
 def pipeline_velocity(df: pd.DataFrame) -> float:
     """Pipeline Velocity = (Qualified Opps x Avg Deal Size x Win Rate) / Sales Cycle Length"""
-    qualified_opps = df[df["stage"].isin(OPEN_STAGES_ORDER) & (df["status"] == "open")]
+    qualified_opps = df[df["status"] == "open"]
     n_qualified = len(qualified_opps)
     deal_size = avg_deal_size(df)
     wr = win_rate(df) / 100
@@ -64,12 +66,16 @@ def pipeline_velocity(df: pd.DataFrame) -> float:
     return round((n_qualified * deal_size * wr) / cycle, 2)
 
 
-def open_pipeline_by_stage(df: pd.DataFrame) -> pd.DataFrame:
+def open_pipeline_by_stage(df: pd.DataFrame, stage_order: list = None) -> pd.DataFrame:
     open_deals = df[df["status"] == "open"]
     grouped = open_deals.groupby("stage").agg(
         deal_count=("deal_id", "count"), total_amount=("amount", "sum")
     )
-    grouped = grouped.reindex(OPEN_STAGES_ORDER).fillna(0)
+    order = list(stage_order or OPEN_STAGES_ORDER)
+    # Estágios que não estão na ordem conhecida (ex.: pipeline customizado) vão pro fim
+    order += [stage for stage in grouped.index if stage not in order]
+    grouped = grouped.reindex(order).fillna(0).astype({"deal_count": int})
+    grouped.index.name = "stage"
     return grouped.reset_index()
 
 
@@ -103,10 +109,48 @@ def single_threaded_deals(df: pd.DataFrame, min_amount: float = 25000) -> pd.Dat
     return open_deals[(open_deals["contacts_engaged"] <= 1) & (open_deals["amount"] >= min_amount)]
 
 
-def build_metrics_summary(df: pd.DataFrame, quota: float, as_of: datetime = None) -> dict:
+def data_quality(df: pd.DataFrame, unknown_source: str = "Desconhecida") -> dict:
+    """Sinais de dado faltando que distorcem as métricas — o relatório deve citá-los."""
+    open_deals = df[df["status"] == "open"]
+    total = len(df)
+
+    def pct(n: int, base: int) -> float:
+        return round(n / base * 100, 1) if base else 0.0
+
+    return {
+        "total_deals": int(total),
+        "deals_without_amount_pct": pct(int((df["amount"] <= 0).sum()), total),
+        "deals_without_source_pct": pct(
+            int((df["source"].isna() | (df["source"] == unknown_source)).sum()), total
+        ),
+        "open_deals_without_contacts_pct": pct(
+            int((open_deals["contacts_engaged"] <= 0).sum()), len(open_deals)
+        ),
+    }
+
+
+MAX_LISTED_DEALS = 15
+
+
+def _top_deals(deals: pd.DataFrame, columns: list) -> list:
+    """Os maiores negócios da lista, pra manter o contexto do Claude enxuto."""
+    return deals.sort_values("amount", ascending=False).head(MAX_LISTED_DEALS)[columns].to_dict(
+        orient="records"
+    )
+
+
+def build_metrics_summary(
+    df: pd.DataFrame,
+    quota: float,
+    as_of: datetime = None,
+    stage_order: list = None,
+    single_thread_min_amount: float = 25000,
+) -> dict:
     """Empacota tudo num dict compacto pronto pra virar contexto pro Claude."""
     as_of = as_of or snapshot_date(df)
     open_deals = df[df["status"] == "open"]
+    stalled = stalled_deals(df, as_of=as_of)
+    single = single_threaded_deals(df, min_amount=single_thread_min_amount)
     return {
         "as_of_date": as_of.date().isoformat(),
         "stale_days_threshold": STALE_DAYS_THRESHOLD,
@@ -117,13 +161,17 @@ def build_metrics_summary(df: pd.DataFrame, quota: float, as_of: datetime = None
         "avg_deal_size": avg_deal_size(df),
         "avg_sales_cycle_days": avg_sales_cycle_days(df),
         "pipeline_velocity_per_day": pipeline_velocity(df),
-        "open_pipeline_by_stage": open_pipeline_by_stage(df).to_dict(orient="records"),
+        "open_pipeline_by_stage": open_pipeline_by_stage(df, stage_order).to_dict(orient="records"),
         "coverage_ratio": coverage_ratio(df, quota),
         "quota": quota,
-        "stalled_deals": stalled_deals(df, as_of=as_of)[
-            ["deal_name", "stage", "amount", "days_since_activity"]
-        ].to_dict(orient="records"),
-        "single_threaded_deals": single_threaded_deals(df)[
-            ["deal_name", "stage", "amount", "contacts_engaged"]
-        ].to_dict(orient="records"),
+        "stalled_deal_count": int(len(stalled)),
+        "stalled_amount": float(stalled["amount"].sum()),
+        "stalled_deals": _top_deals(stalled, ["deal_name", "stage", "amount", "days_since_activity"]),
+        "single_thread_min_amount": single_thread_min_amount,
+        "single_threaded_deal_count": int(len(single)),
+        "single_threaded_amount": float(single["amount"].sum()),
+        "single_threaded_deals": _top_deals(
+            single, ["deal_name", "stage", "amount", "contacts_engaged"]
+        ),
+        "data_quality": data_quality(df),
     }

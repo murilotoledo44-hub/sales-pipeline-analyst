@@ -81,3 +81,25 @@ def test_build_metrics_summary(df):
     assert summary["open_deal_count"] == 15
     assert summary["open_pipeline_amount"] == 491000.0
     assert len(summary["stalled_deals"]) == 5
+
+
+def test_open_pipeline_by_stage_custom_order(df):
+    custom = df.copy()
+    custom.loc[custom["deal_name"] == "Kestrel Biotech", "stage"] = "Solution Fit"
+    stages = metrics.open_pipeline_by_stage(custom, ["Negotiation", "Discovery"])
+    assert list(stages["stage"])[:2] == ["Negotiation", "Discovery"]
+    assert "Solution Fit" in list(stages["stage"])
+
+
+def test_data_quality(df):
+    quality = metrics.data_quality(df)
+    assert quality["total_deals"] == 30
+    assert quality["deals_without_source_pct"] == 0.0
+    assert quality["open_deals_without_contacts_pct"] == 0.0
+
+
+def test_summary_caps_listed_deals(df):
+    summary = metrics.build_metrics_summary(df, quota=250000, single_thread_min_amount=0)
+    assert summary["single_threaded_deal_count"] == 9
+    assert len(summary["single_threaded_deals"]) == 9
+    assert summary["single_threaded_deals"][0]["deal_name"] == "Nordic Freight Co"
