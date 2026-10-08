@@ -28,11 +28,13 @@ def win_rate(df: pd.DataFrame) -> float:
 
 
 def win_rate_by_source(df: pd.DataFrame) -> pd.DataFrame:
+    """Win rate por fonte, com o tamanho da amostra (n) pra evitar conclusões em cima de ruído."""
     closed = df[df["status"].isin(["closed_won", "closed_lost"])]
-    grouped = closed.groupby("source")["status"].apply(
-        lambda s: round((s == "closed_won").mean() * 100, 1)
+    grouped = closed.groupby("source")["status"].agg(
+        closed_deals="count", won_deals=lambda s: (s == "closed_won").sum()
     )
-    return grouped.reset_index(name="win_rate_pct")
+    grouped["win_rate_pct"] = (grouped["won_deals"] / grouped["closed_deals"] * 100).round(1)
+    return grouped.reset_index()
 
 
 def avg_deal_size(df: pd.DataFrame) -> float:
@@ -78,8 +80,17 @@ def coverage_ratio(df: pd.DataFrame, quota: float) -> float:
     return round(open_amount / quota, 2)
 
 
+def snapshot_date(df: pd.DataFrame) -> datetime:
+    """Data de referência do extrato: a atividade mais recente registrada no CSV.
+
+    Usar a data de hoje faria um CSV estático (como o de exemplo) envelhecer
+    sozinho e marcar todos os negócios como estagnados com o passar das semanas.
+    """
+    return df["last_activity_date"].max().to_pydatetime()
+
+
 def stalled_deals(df: pd.DataFrame, as_of: datetime = None) -> pd.DataFrame:
-    as_of = as_of or datetime.today()
+    as_of = as_of or snapshot_date(df)
     open_deals = df[df["status"] == "open"].copy()
     open_deals["days_since_activity"] = (as_of - open_deals["last_activity_date"]).dt.days
     return open_deals[open_deals["days_since_activity"] >= STALE_DAYS_THRESHOLD].sort_values(
@@ -92,9 +103,15 @@ def single_threaded_deals(df: pd.DataFrame, min_amount: float = 25000) -> pd.Dat
     return open_deals[(open_deals["contacts_engaged"] <= 1) & (open_deals["amount"] >= min_amount)]
 
 
-def build_metrics_summary(df: pd.DataFrame, quota: float) -> dict:
+def build_metrics_summary(df: pd.DataFrame, quota: float, as_of: datetime = None) -> dict:
     """Empacota tudo num dict compacto pronto pra virar contexto pro Claude."""
+    as_of = as_of or snapshot_date(df)
+    open_deals = df[df["status"] == "open"]
     return {
+        "as_of_date": as_of.date().isoformat(),
+        "stale_days_threshold": STALE_DAYS_THRESHOLD,
+        "open_deal_count": int(len(open_deals)),
+        "open_pipeline_amount": float(open_deals["amount"].sum()),
         "win_rate_pct": win_rate(df),
         "win_rate_by_source": win_rate_by_source(df).to_dict(orient="records"),
         "avg_deal_size": avg_deal_size(df),
@@ -103,7 +120,7 @@ def build_metrics_summary(df: pd.DataFrame, quota: float) -> dict:
         "open_pipeline_by_stage": open_pipeline_by_stage(df).to_dict(orient="records"),
         "coverage_ratio": coverage_ratio(df, quota),
         "quota": quota,
-        "stalled_deals": stalled_deals(df)[
+        "stalled_deals": stalled_deals(df, as_of=as_of)[
             ["deal_name", "stage", "amount", "days_since_activity"]
         ].to_dict(orient="records"),
         "single_threaded_deals": single_threaded_deals(df)[

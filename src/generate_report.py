@@ -1,4 +1,4 @@
-"""""
+"""
 generate_report.py
 
 Fluxo do projeto:
@@ -11,12 +11,16 @@ Fluxo do projeto:
 Uso:
     export ANTHROPIC_API_KEY="sua-chave-aqui"
     python src/generate_report.py --data data/sample_pipeline.csv --quota 250000
+
+Opcional:
+    --as-of AAAA-MM-DD   data de referência (padrão: atividade mais recente do CSV)
+    ANTHROPIC_MODEL      sobrescreve o modelo usado (padrão: claude-sonnet-5)
 """
 
 import argparse
 import json
 import os
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import anthropic
@@ -26,7 +30,7 @@ import metrics
 ROOT = Path(__file__).resolve().parent.parent
 PERSONA_PATH = ROOT / "agents" / "pipeline_analyst_persona.md"
 REPORTS_DIR = ROOT / "reports"
-MODEL = "claude-sonnet-5"  # ajuste conforme o modelo disponível na sua conta/API
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
 
 
 def load_persona() -> str:
@@ -61,6 +65,11 @@ def call_claude(persona_prompt: str, metrics_summary: dict) -> str:
 
     text = "".join(block.text for block in response.content if block.type == "text")
 
+    if response.stop_reason == "max_tokens":
+        raise RuntimeError(
+            "O relatório foi cortado (stop_reason=max_tokens). Aumente max_tokens."
+        )
+
     if not text.strip():
         raise RuntimeError(
             "A API retornou uma resposta vazia. "
@@ -76,10 +85,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default=str(ROOT / "data" / "sample_pipeline.csv"))
     parser.add_argument("--quota", type=float, default=250000)
+    parser.add_argument(
+        "--as-of",
+        type=datetime.fromisoformat,
+        default=None,
+        help="Data de referência AAAA-MM-DD (padrão: atividade mais recente do CSV)",
+    )
     args = parser.parse_args()
 
     df = metrics.load_data(args.data)
-    metrics_summary = metrics.build_metrics_summary(df, quota=args.quota)
+    metrics_summary = metrics.build_metrics_summary(df, quota=args.quota, as_of=args.as_of)
 
     print("Métricas calculadas:")
     print(json.dumps(metrics_summary, indent=2, ensure_ascii=False))
