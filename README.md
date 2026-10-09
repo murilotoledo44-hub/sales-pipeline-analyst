@@ -1,67 +1,107 @@
-# Relatório de Pipeline — Análise do Período
+# Sales Pipeline Analyst
 
-## 1. Resumo executivo
+Analista de pipeline de vendas automatizado: puxa os negócios do HubSpot (ou de um CSV), calcula métricas reais, compara com a semana anterior e usa o Claude para transformar esses números em um relatório executivo em Markdown com gráficos — toda segunda-feira, via GitHub Actions.
 
-Pipeline aberto de R$ 491.000 contra uma meta de R$ 250.000, gerando cobertura de 1,96x — no limite inferior do saudável. O maior risco não está no volume, mas na qualidade: 5 dos 15 negócios abertos (33%) estão estagnados há 18-40 dias, e outros 5 são single-threaded, com sobreposição significativa entre os dois grupos (3 negócios aparecem em ambas as listas). O canal Outbound está arrastando a taxa de conversão geral para baixo (37,5% vs. 75% de Inbound), o que merece atenção antes de escalar investimento nesse canal.
+> **Projeto de portfólio — dados fictícios.** Os negócios no HubSpot vêm do dataset público *CRM Sales Opportunities* da [Maven Analytics](https://mavenanalytics.io/data-playground/crm-sales-opportunities) (também disponível no Kaggle): pipeline B2B de uma empresa fictícia de hardware (MavenTech), com 499 oportunidades de out/2016 a dez/2017. Todos os valores estão em **dólares (USD)**.
 
-## 2. Métricas-chave
+## Como funciona
 
-| Métrica | Valor | Leitura |
+```
+HubSpot ──► src/hubspot_source.py ──► CSV ──► src/metrics.py ──► JSON de métricas ─┬─► Claude ──► reports/pipeline_report_AAAA-MM-DD.md
+                                                     reports/history/ (semana anterior) ─┤
+                                                                     src/charts.py ──────┴─► reports/charts/AAAA-MM-DD/*.png
+```
+
+1. **`src/hubspot_source.py`** — exporta os negócios do HubSpot via API e converte para o formato de CSV abaixo (estágio, status ganho/perdido, fonte, última atividade, contatos).
+2. **`src/metrics.py`** — cálculos determinísticos em pandas (nenhuma IA aqui): win rate geral e por fonte (com tamanho da amostra), ticket médio, ciclo de vendas, velocidade de pipeline, pipeline aberto por estágio, cobertura sobre a meta, negócios estagnados e single-threaded, e qualidade dos dados.
+3. **`src/history.py`** — salva um snapshot das métricas em `reports/history/` a cada relatório e calcula a variação contra o anterior (incluindo negócios que entraram ou saíram da lista de estagnados).
+4. **`src/charts.py`** — gera os gráficos: pipeline por estágio, win rate por fonte e, a partir do 2º relatório, a evolução do pipeline e da cobertura.
+5. **`src/generate_report.py`** — envia **só as métricas calculadas e a comparação** (não o CSV) para a API do Claude, usando `agents/pipeline_analyst_persona.md` como system prompt, e salva o relatório com os gráficos em `reports/`.
+6. **`.github/workflows/main.yml`** — roda os testes, exporta do HubSpot, gera o relatório toda segunda às 08:00 UTC e faz commit em `reports/`.
+
+## Rodando localmente
+
+```bash
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY="sua-chave"
+python src/generate_report.py --data data/sample_pipeline.csv --quota 150000
+
+# Com os dados do HubSpot
+export HUBSPOT_ACCESS_TOKEN="pat-..."
+python src/hubspot_source.py --out data/hubspot_pipeline.csv
+python src/generate_report.py --data data/hubspot_pipeline.csv --quota 150000
+
+# Só métricas, comparação e gráficos, sem chamar o Claude
+python src/generate_report.py --dry-run
+```
+
+| Opção | Padrão | Descrição |
 |---|---|---|
-| Win rate geral | 53,3% | Sólido, mas mascara disparidade grande entre fontes |
-| Win rate Inbound | 75,0% | Melhor canal, disponível para escalar |
-| Win rate Referral | 66,7% | Segundo melhor canal — base amostral provavelmente pequena, verificar N |
-| Win rate Outbound | 37,5% | Metade da conversão de Inbound — canal problemático |
-| Tamanho médio do negócio | R$ 39.375 | Referência, sem histórico comparativo para julgar tendência |
-| Ciclo de vendas médio | 90 dias | Referência; sem baseline anterior para avaliar se está acelerando ou não |
-| Velocidade de pipeline | R$ 3.497,81/dia | Métrica composta — útil para acompanhar tendência período a período |
-| Cobertura | 1,96x | Apertada frente à meta (ver seção 3) |
-| Negócios estagnados | 5 (R$ 191.000, 39% do pipeline) | Risco de atraso ou perda de forecast |
-| Negócios single-threaded | 5 (R$ 188.500, 38% do pipeline) | Risco de perda por dependência de um único contato |
+| `--data` | `data/sample_pipeline.csv` | CSV exportado do CRM |
+| `--quota` | `150000` | Meta do período em USD, usada na cobertura |
+| `--as-of` | atividade mais recente do CSV | Data de referência para contar dias sem atividade |
+| `--single-thread-min` | `25000` | Valor mínimo (USD) para sinalizar negócio com 1 contato |
+| `--dry-run` | — | Não chama o Claude nem grava histórico |
+| `ANTHROPIC_MODEL` (env) | `claude-sonnet-5` | Modelo do Claude usado no relatório |
 
-**Nota de qualidade de dados:** não há dados de período anterior para comparação de tendência (win rate, ciclo, velocidade). Também não sei o tamanho da amostra por fonte (win rate de 66,7% em Referral pode ser 2 de 3 negócios — instável). Recomendo incluir contagem de negócios por fonte no próximo corte.
+> **Por que `--as-of`?** Os dias sem atividade são contados a partir da data do extrato, não de hoje. Assim, um CSV estático não "envelhece" sozinho e marca todo o pipeline como estagnado.
 
-## 3. Cobertura
+## Formato do CSV
 
-**Apertada.** Regra geral de mercado pede cobertura de 3x a 4x para pipelines com ciclo de 90 dias e win rate ~50%; 1,96x está bem abaixo disso.
+| Coluna | Exemplo | Observação |
+|---|---|---|
+| `deal_id` | `1001` | |
+| `deal_name` | `Acme Robotics - Expansion` | |
+| `stage` | `Negotiation` | Discovery, Qualification, Evaluation, Proposal, Negotiation, Won, Lost |
+| `status` | `open` | `open`, `closed_won` ou `closed_lost` |
+| `amount` | `42000` | |
+| `source` | `Outbound` | Inbound, Outbound, Referral… |
+| `created_date`, `close_date`, `last_activity_date` | `2026-06-02` | ISO (AAAA-MM-DD) |
+| `contacts_engaged` | `3` | Contatos envolvidos no negócio |
 
-O cálculo simplista (491.000 / 250.000 = 1,96x) não pondera por win rate. Se aplicarmos o win rate real de 53,3% como proxy de probabilidade de conversão, o valor esperado do pipeline aberto é de aproximadamente R$ 261.700 — apenas 4,7% acima da meta. Isso significa que **não há margem de segurança**: qualquer perda acima do esperado (por exemplo, se os 5 negócios estagnados — R$ 191.000 — não avançarem) coloca a meta em risco direto.
+Regras: estagnado = 14+ dias sem atividade; single-threaded = 1 contato e valor ≥ `--single-thread-min`.
 
-**Ação recomendada:** aumentar geração de pipeline novo neste período, priorizando Inbound e Referral (win rates mais altos), e não tratar 1,96x como confortável.
+## Configuração no GitHub
 
-## 4. Negócios que precisam de intervenção
+Em **Settings → Secrets and variables → Actions**:
 
-### Estagnados
-| Negócio | Estágio | Valor | Dias sem atividade | Ação recomendada |
-|---|---|---|---|---|
-| Nordic Freight Co | Evaluation | R$ 65.000 | 40 | Escalar para call de reengajamento com champion; se sem resposta em 5 dias, marcar como at-risk no forecast |
-| Fintra Payments | Proposal | R$ 54.000 | 30 | Confirmar se a proposta ainda está sob avaliação; ligar diretamente para o decisor, não apenas e-mail |
-| Lumen Energy Co | Proposal | R$ 29.500 | 25 | Enviar follow-up com prazo claro de decisão; se não houver resposta, requalificar estágio |
-| Ironclad Security | Qualification | R$ 24.000 | 22 | Retomar discovery — 22 dias parado em Qualification sugere falta de urgência ou fit não confirmado |
-| BrightPath Retail | Proposal | R$ 18.500 | 18 | Follow-up padrão; menor risco relativo, mas monitorar próxima semana |
+| Tipo | Nome | Para quê |
+|---|---|---|
+| Secret | `ANTHROPIC_API_KEY` | Obrigatório — gera o texto do relatório |
+| Secret | `HUBSPOT_ACCESS_TOKEN` | Puxa os negócios do HubSpot. Sem ele, o workflow usa `data/sample_pipeline.csv` |
+| Variable | `PIPELINE_QUOTA` | Meta do período em USD (padrão `150000`) |
+| Variable | `SINGLE_THREAD_MIN` | Valor mínimo para single-threaded (padrão `25000`) |
+| Variable | `ANTHROPIC_MODEL` | Opcional — troca o modelo |
 
-### Single-threaded
-| Negócio | Estágio | Valor | Contatos engajados | Ação recomendada |
-|---|---|---|---|---|
-| Nordic Freight Co | Evaluation | R$ 65.000 | 1 | **Duplo risco** (também estagnado) — priorizar mapeamento de mais stakeholders antes de qualquer outra ação |
-| Fintra Payments | Proposal | R$ 54.000 | 1 | **Duplo risco** — buscar introdução a um segundo contato (financeiro ou usuário final) antes de reenviar proposta |
-| Kestrel Biotech | Discovery | R$ 52.000 | 1 | Ainda em estágio inicial — bom momento para mapear org chart antes de avançar |
-| Harbor Insurance | Qualification | R$ 38.000 | 1 | Solicitar apresentação a outro stakeholder como condição para avançar para Evaluation |
-| Lumen Energy Co | Proposal | R$ 29.500 | 1 | **Duplo risco** — mesma ação de expansão de contatos, combinada com o follow-up de estagnação |
+**Token do HubSpot:** em HubSpot → *Settings → Integrations → Private Apps → Create a private app*, marque o escopo `crm.objects.deals.read` e copie o token de acesso.
 
-**Destaque de risco composto:** Nordic Freight Co, Fintra Payments e Lumen Energy Co somam R$ 148.500 e estão estagnados **e** single-threaded simultaneamente. Isso é 30% do pipeline aberto concentrado no pior perfil de risco. Recomendo tratamento prioritário nesses três antes de qualquer outro negócio.
+Para rodar na hora: aba **Actions → Weekly Pipeline Report → Run workflow**.
 
-## 5. Forecast
+**Por que a meta padrão é $150,000?** É a média trimestral de receita ganha nos três trimestres completos do dataset (Q2–Q4 2017: $188.5k, $157.7k e $125.8k ≈ $157k), arredondada para baixo. Contra o pipeline aberto atual (~$264k em 117 negócios), isso dá uma cobertura de ~1.8x.
 
-Base: pipeline aberto de R$ 491.000, win rate histórico de 53,3% (mas com disparidade forte por fonte), 5 negócios de alto risco totalizando R$ 191.000.
+> O CSV exportado do HubSpot não é commitado (está no `.gitignore`); os relatórios em `reports/` citam nomes e valores dos negócios fictícios do dataset. Se um dia usar dados reais de clientes, torne o repositório privado.
 
-- **Commit — R$ 130.000 a R$ 150.000**
-  Considera apenas negócios sem sinal de risco (não estagnados, multi-threaded) em estágios avançados (Proposal/Negotiation), aplicando um win rate conservador de ~65% (próximo ao de Referral/Inbound, fontes mais previsíveis). Exclui os R$ 148.500 de risco composto.
+## Testes
 
-- **Best Case — R$ 190.000 a R$ 210.000**
-  Assume que 2 dos 3 negócios de risco composto (estagnados + single-threaded) são reengajados com sucesso nas próximas semanas e avançam, mais conversão normal do restante do pipeline saudável a 53,3%.
+```bash
+pip install pytest
+pytest -q
+```
 
-- **Upside — R$ 240.000 a R$ 260.000**
-  Requer que todos os 5 negócios estagnados sejam reativados **e** convertidos, e que os negócios em Negotiation (R$ 120.000) fechem quase integralmente. Esse cenário depende de intervenção ativa e imediata nos negócios da seção 4 — não é uma extrapolação passiva do histórico.
+Os testes também rodam a cada push/PR (`.github/workflows/tests.yml`).
 
-**Leitura honesta:** mesmo no Best Case, o forecast fica abaixo da meta de R$ 250.000. Atingir a meta neste período depende de ação concreta nos negócios estetup inicial.
+## Estrutura
+
+```
+agents/pipeline_analyst_persona.md   # system prompt do analista
+data/sample_pipeline.csv             # dados de exemplo
+src/hubspot_source.py                # exportação do HubSpot
+src/metrics.py                       # cálculos de pipeline
+src/history.py                       # snapshots e comparação semana a semana
+src/charts.py                        # gráficos PNG
+src/generate_report.py               # orquestra tudo + Claude
+tests/                               # testes
+reports/                             # relatórios gerados
+reports/history/                     # snapshots de métricas (JSON)
+reports/charts/                      # gráficos de cada relatório
+```
