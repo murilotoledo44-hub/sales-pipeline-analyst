@@ -2,6 +2,8 @@
 
 Analista de pipeline de vendas automatizado: puxa os negócios do HubSpot (ou de um CSV), calcula métricas reais, compara com a semana anterior e usa o Claude para transformar esses números em um relatório executivo em Markdown com gráficos — toda segunda-feira, via GitHub Actions.
 
+> **Projeto de portfólio — dados fictícios.** Os negócios no HubSpot vêm do dataset público *CRM Sales Opportunities* da [Maven Analytics](https://mavenanalytics.io/data-playground/crm-sales-opportunities) (também disponível no Kaggle): pipeline B2B de uma empresa fictícia de hardware (MavenTech), com 499 oportunidades de out/2016 a dez/2017. Todos os valores estão em **dólares (USD)**.
+
 ## Como funciona
 
 ```
@@ -22,12 +24,12 @@ HubSpot ──► src/hubspot_source.py ──► CSV ──► src/metrics.py �
 ```bash
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY="sua-chave"
-python src/generate_report.py --data data/sample_pipeline.csv --quota 250000
+python src/generate_report.py --data data/sample_pipeline.csv --quota 150000
 
-# Com dados reais do HubSpot
+# Com os dados do HubSpot
 export HUBSPOT_ACCESS_TOKEN="pat-..."
 python src/hubspot_source.py --out data/hubspot_pipeline.csv
-python src/generate_report.py --data data/hubspot_pipeline.csv --quota 50000
+python src/generate_report.py --data data/hubspot_pipeline.csv --quota 150000
 
 # Só métricas, comparação e gráficos, sem chamar o Claude
 python src/generate_report.py --dry-run
@@ -36,9 +38,9 @@ python src/generate_report.py --dry-run
 | Opção | Padrão | Descrição |
 |---|---|---|
 | `--data` | `data/sample_pipeline.csv` | CSV exportado do CRM |
-| `--quota` | `250000` | Meta do período, usada na cobertura |
+| `--quota` | `150000` | Meta do período em USD, usada na cobertura |
 | `--as-of` | atividade mais recente do CSV | Data de referência para contar dias sem atividade |
-| `--single-thread-min` | `25000` | Valor mínimo para sinalizar negócio com 1 contato |
+| `--single-thread-min` | `25000` | Valor mínimo (USD) para sinalizar negócio com 1 contato |
 | `--dry-run` | — | Não chama o Claude nem grava histórico |
 | `ANTHROPIC_MODEL` (env) | `claude-sonnet-5` | Modelo do Claude usado no relatório |
 
@@ -66,8 +68,8 @@ Em **Settings → Secrets and variables → Actions**:
 | Tipo | Nome | Para quê |
 |---|---|---|
 | Secret | `ANTHROPIC_API_KEY` | Obrigatório — gera o texto do relatório |
-| Secret | `HUBSPOT_ACCESS_TOKEN` | Dados reais. Sem ele, o workflow usa `data/sample_pipeline.csv` |
-| Variable | `PIPELINE_QUOTA` | Meta do período (padrão `250000`) |
+| Secret | `HUBSPOT_ACCESS_TOKEN` | Puxa os negócios do HubSpot. Sem ele, o workflow usa `data/sample_pipeline.csv` |
+| Variable | `PIPELINE_QUOTA` | Meta do período em USD (padrão `150000`) |
 | Variable | `SINGLE_THREAD_MIN` | Valor mínimo para single-threaded (padrão `25000`) |
 | Variable | `ANTHROPIC_MODEL` | Opcional — troca o modelo |
 
@@ -75,7 +77,9 @@ Em **Settings → Secrets and variables → Actions**:
 
 Para rodar na hora: aba **Actions → Weekly Pipeline Report → Run workflow**.
 
-> ⚠️ **Privacidade:** o CSV exportado do HubSpot nunca é commitado (está no `.gitignore`), mas os relatórios, gráficos e o histórico em `reports/` citam nomes e valores de negócios. Se o repositório for público e os dados forem reais, torne-o privado (*Settings → General → Change visibility*).
+**Por que a meta padrão é $150,000?** É a média trimestral de receita ganha nos três trimestres completos do dataset (Q2–Q4 2017: $188.5k, $157.7k e $125.8k ≈ $157k), arredondada para baixo. Contra o pipeline aberto atual (~$264k em 117 negócios), isso dá uma cobertura de ~1.8x.
+
+> O CSV exportado do HubSpot não é commitado (está no `.gitignore`); os relatórios em `reports/` citam nomes e valores dos negócios fictícios do dataset. Se um dia usar dados reais de clientes, torne o repositório privado.
 
 ## Testes
 

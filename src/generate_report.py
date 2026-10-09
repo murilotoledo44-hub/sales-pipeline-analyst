@@ -105,7 +105,7 @@ def charts_section(chart_list: list) -> str:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default=str(ROOT / "data" / "sample_pipeline.csv"))
-    parser.add_argument("--quota", type=float, default=250000)
+    parser.add_argument("--quota", type=float, default=150000)
     parser.add_argument(
         "--as-of",
         type=datetime.fromisoformat,

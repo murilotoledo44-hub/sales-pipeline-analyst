@@ -45,7 +45,7 @@ jobs:
         run: >
           python src/generate_report.py
           --data "$PIPELINE_DATA"
-          --quota "${{ vars.PIPELINE_QUOTA || '250000' }}"
+          --quota "${{ vars.PIPELINE_QUOTA || '150000' }}"
           --single-thread-min "${{ vars.SINGLE_THREAD_MIN || '25000' }}"
 
       - name: Commit generated report

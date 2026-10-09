@@ -20,14 +20,14 @@ SERIES = "#2a78d6"
 REFERENCE = "#8a8984"
 
 
-def brl(value: float) -> str:
-    """R$ 1.234.567 (sem centavos)."""
-    return "R$ " + f"{value:,.0f}".replace(",", ".")
+def usd(value: float) -> str:
+    """$1,234,567 (dólares, sem centavos)."""
+    return f"${value:,.0f}"
 
 
 def pct(value: float) -> str:
-    """75,0% (vírgula decimal)."""
-    return f"{value:.1f}%".replace(".", ",")
+    """75.0%"""
+    return f"{value:.1f}%"
 
 
 def _new_figure(height: float):
@@ -70,10 +70,10 @@ def pipeline_by_stage_chart(stages: list, path: Path) -> Path:
     amounts = [s["total_amount"] for s in stages]
     fig, ax = _new_figure(0.5 * len(labels) + 1.6)
     positions = _hbar(ax, labels, amounts)
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: brl(v)))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: usd(v)))
     for pos, stage in zip(positions, stages):
         ax.text(
-            stage["total_amount"], pos, f"  {brl(stage['total_amount'])} · {stage['deal_count']} neg.",
+            stage["total_amount"], pos, f"  {usd(stage['total_amount'])} · {stage['deal_count']} neg.",
             va="center", fontsize=8.5, color=TEXT_SECONDARY,
         )
     ax.set_xlim(0, max(amounts + [1]) * 1.35)
@@ -120,7 +120,7 @@ def pipeline_trend_chart(history: list, path: Path) -> Path:
     dates = [d for d, _ in history]
     values = [s["open_pipeline_amount"] for _, s in history]
     return _trend(dates, values, path, "Evolução do pipeline aberto",
-                  "Valor aberto em cada relatório", brl)
+                  "Valor aberto em cada relatório", usd)
 
 
 def coverage_trend_chart(history: list, path: Path) -> Path:
@@ -128,7 +128,7 @@ def coverage_trend_chart(history: list, path: Path) -> Path:
     values = [s["coverage_ratio"] for _, s in history]
     return _trend(dates, values, path, "Evolução da cobertura",
                   "Pipeline aberto ÷ meta (referência saudável: 3x)",
-                  lambda v: f"{v:.1f}x".replace(".", ","), references=[(1, "meta"), (3, "3x")])
+                  lambda v: f"{v:.1f}x", references=[(1, "meta"), (3, "3x")])
 
 
 def build_charts(summary: dict, history: list, out_dir: Path) -> list:

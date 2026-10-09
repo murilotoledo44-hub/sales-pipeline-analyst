@@ -10,6 +10,7 @@ import pandas as pd
 DATE_COLS = ["created_date", "close_date", "last_activity_date"]
 OPEN_STAGES_ORDER = ["Discovery", "Qualification", "Evaluation", "Proposal", "Negotiation"]
 STALE_DAYS_THRESHOLD = 14
+CURRENCY = "USD"
 
 
 def load_data(path: str) -> pd.DataFrame:
@@ -152,6 +153,7 @@ def build_metrics_summary(
     stalled = stalled_deals(df, as_of=as_of)
     single = single_threaded_deals(df, min_amount=single_thread_min_amount)
     return {
+        "currency": CURRENCY,
         "as_of_date": as_of.date().isoformat(),
         "stale_days_threshold": STALE_DAYS_THRESHOLD,
         "open_deal_count": int(len(open_deals)),

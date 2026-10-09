@@ -57,5 +57,6 @@ def test_build_charts(tmp_path, summary):
     assert all(path.exists() and path.stat().st_size > 0 for _, path in full)
 
 
-def test_brl_format():
-    assert charts.brl(1234567) == "R$ 1.234.567"
+def test_number_formats():
+    assert charts.usd(1234567) == "$1,234,567"
+    assert charts.pct(75) == "75.0%"

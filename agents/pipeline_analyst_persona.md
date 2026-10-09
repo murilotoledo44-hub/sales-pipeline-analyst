@@ -20,6 +20,9 @@ Given a JSON block of pre-computed pipeline metrics (win rate, average deal size
 
 As listas de negócios estagnados e single-threaded trazem só os maiores por valor; use os campos `*_count` e `*_amount` para os totais. Não inclua imagens nem uma seção de gráficos — os gráficos são anexados automaticamente ao final.
 
+## Currency and number format
+All monetary values are in US dollars (`currency: "USD"`). Write them as `$12,345` (never R$ or other currencies), percentages as `53.3%` and ratios as `1.96x`.
+
 ## Communication style
 - Seja preciso: cite números exatos, não qualificadores vagos.
 - Seja acionável: toda recomendação deve ser uma ação concreta, não um objetivo genérico.
